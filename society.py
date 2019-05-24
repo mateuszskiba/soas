@@ -11,14 +11,15 @@ def computeCooperationRatio(model):
 
 
 class SocietyModel(Model):
-    """A model with some number of social agents."""
+    """Cooperation emergence model in homogenous group setting"""
 
-    def __init__(self, N, changeProb, isCoop, neighbors, minNeighbors, changeProbDev, debug=False):
+    def __init__(self, N, changeProb, isCoop, neighbors, minNeighbors, changeProbDev, twoWay, debug=False):
         self.agentConfig = {
                 'changeProb': changeProb,
                 'isCoop': isCoop,
                 'pNeighbors': neighbors,
-                'minCoop': minNeighbors
+                'minCoop': minNeighbors,
+                'twoWay': twoWay
             }
         self.numAgents = N
         self.schedule = RandomActivation(self)
@@ -68,6 +69,7 @@ class SocialAgent(Agent):
         self.isCoop = agentConfig['isCoop']
         self.nNeighbors = agentConfig['pNeighbors']
         self.minCop = agentConfig['minCoop']
+        self.twoWay = agentConfig['twoWay']
 
     def requirementsMet(self):
         if not(self.model.askNeighbors(self.nNeighbors) >= self.minCop): # if the min number of cooperating agents isn't reached
@@ -77,7 +79,10 @@ class SocialAgent(Agent):
     def shouldCooperate(self):
         # Function asnwering the question if the agent is cooperating
         if np.random.rand() >= 1 - self.changeProb:
-            self.isCoop = True
+            if self.twoWay:
+                self.isCoop = not(self.isCoop)
+            else:
+                self.isCoop = True
             return self.isCoop
         else:
             self.isCoop = self.requirementsMet()
