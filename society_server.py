@@ -24,5 +24,5 @@ server = ModularServer(SocietyModel,
                         'minNeighbors': min_neighbors,
                         'twoWay': two_way
                         })
-server.port = 8521 # The default
+server.port = 8521  # The default
 server.launch()

@@ -24,7 +24,7 @@ class SocietyModel(Model):
         self.numAgents = N
         self.schedule = RandomActivation(self)
         self.debug = debug
-        self.running = True
+        self.running = True  # is it necessary?
         # Activates all the agents once per step in random order, should be considered a parameter
 
         # Create agents
