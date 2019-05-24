@@ -13,7 +13,7 @@ def computeCooperationRatio(model):
 class SocietyModel(Model):
     """A model with some number of social agents."""
 
-    def __init__(self, N, changeProb, isCoop, neighbors, minNeighbors, debug=False):
+    def __init__(self, N, changeProb, isCoop, neighbors, minNeighbors, changeProbDev, debug=False):
         self.agentConfig = {
                 'changeProb': changeProb,
                 'isCoop': isCoop,
@@ -28,6 +28,8 @@ class SocietyModel(Model):
 
         # Create agents
         for i in range(self.numAgents):
+            customConfig = self.agentConfig
+            customConfig['changeProb'] += self.sampleFromGaussain(changeProb, changeProbDev)
             socialAgent = SocialAgent(i, self.agentConfig, self)
             self.schedule.add(socialAgent)
 
@@ -35,6 +37,11 @@ class SocietyModel(Model):
             model_reporters={"CooperationRatio": computeCooperationRatio},
             agent_reporters={"IsCoop": "isCoop"}
         )
+
+    def sampleFromGaussain(self, mean, dev):
+        sample = np.random.normal(loc=mean, scale=dev)
+        positive = np.random.rand()
+        return sample if positive else -sample
 
     def askNeighbors(self, howMany):
         cooperating = np.array([int(agent.isCoop) for agent in self.schedule.agents])
@@ -44,13 +51,12 @@ class SocietyModel(Model):
     def totalCooperation(self):
         return sum([int(agent.isCoop) for agent in self.schedule.agents]) == self.numAgents
 
-
     def step(self):
         '''Advance the model by one step.'''
         self.dataCollector.collect(self)  # collect data
         self.schedule.step()
-        if self.totalCooperation():
-            self.running = False
+        #if self.totalCooperation():
+         #   self.running = False
 
 
 class SocialAgent(Agent):
@@ -70,15 +76,11 @@ class SocialAgent(Agent):
 
     def shouldCooperate(self):
         # Function asnwering the question if the agent is cooperating
-        if self.requirementsMet() and not(self.isCoop):
+        if np.random.rand() >= 1 - self.changeProb:
             self.isCoop = True
             return self.isCoop
-
-        elif not(self.isCoop):
-            self.isCoop = np.random.rand() >= 1 - self.changeProb
-            return self.isCoop
-        
         else:
+            self.isCoop = self.requirementsMet()
             return self.isCoop
 
     def printStatus(self):
