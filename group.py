@@ -1,7 +1,5 @@
 from mesa import Agent, Model
 from mesa.time import RandomActivation
-from mesa.datacollection import DataCollector
-from mesa.batchrunner import BatchRunner
 import numpy as np
 
 
@@ -12,7 +10,8 @@ def compute_cooperation_ratio(model):
 
 class GroupModel(Model):
     """A model with some number of agents."""
-    def __init__(self, n, n_groups, n_ask_neigh, min_accept_neigh, coop_prob, coop_prob_dev, debug=False):
+    def __init__(self, n, n_groups, n_ask_neigh, min_accept_neigh, linear_coop, willing_to_coop, coop_prob,
+                 coop_prob_dev, debug=False):
         super().__init__()
         self.num_agents = n
         self.schedule = RandomActivation(self)
@@ -27,7 +26,9 @@ class GroupModel(Model):
             agent_config = {
                 'group_id': group_id,
                 'n_ask_neigh': n_ask_neigh,
-                "min_accept_neigh": min_accept_neigh[group_id],
+                'min_accept_neigh': min_accept_neigh[group_id],
+                'linear_coop': linear_coop,
+                'willing_to_coop': willing_to_coop[group_id],
                 'coop_prob': coop_prob[group_id],
                 'coop_prob_dev': coop_prob_dev
             }
@@ -39,10 +40,10 @@ class GroupModel(Model):
         #     agent_reporters={"IsCoop": "is_coop"}
         # )
 
-    def step(self):
-        """Advance the model by one step."""
-        self.dataCollector.collect(self)
-        self.schedule.step()
+    # def step(self):
+    #     """Advance the model by one step."""
+    #     # self.data_collector.collect(self)
+    #     self.schedule.step()
 
     def ask_neighbors(self, n_ask_neigh):
         responses = np.array([int(agent.is_coop) for agent in self.schedule.agents])
@@ -66,6 +67,8 @@ class GroupAgent(Agent):
         self.group_id = agent_config['group_id']
         self.n_ask_neigh = agent_config['n_ask_neigh']
         self.min_accept_neigh = agent_config['min_accept_neigh']
+        self.linear_coop = agent_config['linear_coop']
+        self.willing_to_coop = agent_config['willing_to_coop']
         self.coop_prob = agent_config['coop_prob']
         self.is_coop = False
         # self.sum = 0
@@ -73,6 +76,15 @@ class GroupAgent(Agent):
     def decide(self):
         if np.random.rand() >= 1 - self.coop_prob:
             self.is_coop = True
+        elif self.linear_coop:
+            rand_val = np.random.randint(self.n_ask_neigh+1)
+            if self.model.ask_neighbors == self.n_ask_neigh:
+                self.is_coop = True
+            else:
+                self.is_coop = self.model.ask_neighbors(self.n_ask_neigh) * self.willing_to_coop > rand_val
+            # print(self.coop_prob, '===', self.model.ask_neighbors(self.n_ask_neigh),
+            #       '(' + str(self.model.ask_neighbors(self.n_ask_neigh) * self.willing_to_coop) + ')', rand_val,
+            #       self.is_coop)
         else:
             self.is_coop = self.model.ask_neighbors(self.n_ask_neigh) >= self.min_accept_neigh
         return self.is_coop
